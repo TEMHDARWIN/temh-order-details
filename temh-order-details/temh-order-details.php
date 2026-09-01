@@ -3,7 +3,7 @@
  * Plugin Name: TEMH Order Details
  * Plugin URI: https://github.com/TEMHDARWIN/temh-order-details
  * Description: Secure WooCommerce order details shortcode with nonce verification and capability checks
- * Version: 1.0.2
+ * Version: 1.0.3
  * Author: TEMHDARWIN
  * Author URI: https://github.com/TEMHDARWIN
  * License: GPL v2 or later
@@ -31,13 +31,41 @@ add_shortcode( 'temh_order_details', function() {
         $order_id = wc_get_order_id_by_order_key( $order_key );
     }
 
-    if ( ! $order_id ) return '';
+    if ( ! $order_id ) return '<p>No order found.</p>';
     
     $order = wc_get_order( $order_id );
-    if ( ! $order ) return '';
+    if ( ! $order ) return '<p>Order not found.</p>';
 
     ob_start();
-    wc_get_template( 'order/order-details.php', [ 'order_id' => $order_id ] );
+    ?>
+    <div class="temh-order-details">
+        <h3>Order #<?php echo $order->get_order_number(); ?></h3>
+        <p><strong>Status:</strong> <?php echo wc_get_order_status_name( $order->get_status() ); ?></p>
+        <p><strong>Date:</strong> <?php echo wc_format_datetime( $order->get_date_created() ); ?></p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Qty</th>
+                    <th>Price</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ( $order->get_items() as $item ) : ?>
+                <tr>
+                    <td><?php echo $item->get_name(); ?></td>
+                    <td><?php echo $item->get_quantity(); ?></td>
+                    <td><?php echo wc_price( $item->get_total() ); ?></td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+        <p><strong>Total:</strong> <?php echo $order->get_formatted_order_total(); ?></p>
+        <p><strong>Payment:</strong> <?php echo $order->get_payment_method_title(); ?></p>
+        <h4>Billing</h4>
+        <p><?php echo $order->get_formatted_billing_address(); ?></p>
+    </div>
+    <?php
     return ob_get_clean();
 } );
 
