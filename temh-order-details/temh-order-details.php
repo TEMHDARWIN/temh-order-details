@@ -3,7 +3,7 @@
  * Plugin Name: TEMH Order Details
  * Plugin URI: https://github.com/TEMHDARWIN/temh-order-details
  * Description: Secure WooCommerce order details shortcode with nonce verification and capability checks
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: TEMHDARWIN
  * Author URI: https://github.com/TEMHDARWIN
  * License: GPL v2 or later
@@ -62,31 +62,54 @@ add_shortcode( 'temh_order_details', function() {
     // Output order details
     ob_start();
     ?>
-    <div class="temh-order-details">
+    <div class="temh-order-details" style="font-family: Arial, sans-serif; margin: 20px 0;">
         <h2>Order #<?php echo esc_html( $order->get_id() ); ?></h2>
-        <p><strong>Status:</strong> <?php echo esc_html( wc_get_order_status_name( $order->get_status() ) ); ?></p>
-        <p><strong>Date:</strong> <?php echo esc_html( $order->get_date_created()->date( 'Y-m-d H:i:s' ) ); ?></p>
-        <p><strong>Total:</strong> <?php echo wp_kses_post( $order->get_formatted_order_total() ); ?></p>
         
-        <h3>Items</h3>
-        <table style="width: 100%; border-collapse: collapse;">
+        <div style="margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 4px;">
+            <p><strong>Status:</strong> <span style="color: #23a745;"><?php echo esc_html( wc_get_order_status_name( $order->get_status() ) ); ?></span></p>
+            <p><strong>Date:</strong> <?php echo esc_html( $order->get_date_created()->date( 'Y-m-d H:i:s' ) ); ?></p>
+            <p><strong>Total:</strong> <span style="font-size: 18px; font-weight: bold;"><?php echo wp_kses_post( $order->get_formatted_order_total() ); ?></span></p>
+        </div>
+        
+        <h3>Order Items</h3>
+        <table style="width: 100%; border-collapse: collapse; border: 1px solid #ddd;">
             <thead>
-                <tr style="border-bottom: 2px solid #ddd;">
-                    <th style="text-align: left; padding: 8px;">Product</th>
-                    <th style="text-align: center; padding: 8px;">Qty</th>
-                    <th style="text-align: right; padding: 8px;">Price</th>
+                <tr style="background: #f9f9f9; border-bottom: 2px solid #ddd;">
+                    <th style="text-align: left; padding: 12px; border-right: 1px solid #ddd;">Product</th>
+                    <th style="text-align: center; padding: 12px; border-right: 1px solid #ddd; width: 80px;">Qty</th>
+                    <th style="text-align: right; padding: 12px; width: 120px;">Price</th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ( $order->get_items() as $item_id => $item ) : ?>
-                    <tr style="border-bottom: 1px solid #eee;">
-                        <td style="padding: 8px;"><?php echo esc_html( $item->get_name() ); ?></td>
-                        <td style="text-align: center; padding: 8px;"><?php echo esc_html( $item->get_quantity() ); ?></td>
-                        <td style="text-align: right; padding: 8px;"><?php echo wp_kses_post( $item->get_total() ); ?></td>
+                    <tr style="border-bottom: 1px solid #ddd;">
+                        <td style="padding: 12px; border-right: 1px solid #ddd;"><?php echo esc_html( $item->get_name() ); ?></td>
+                        <td style="text-align: center; padding: 12px; border-right: 1px solid #ddd;"><?php echo esc_html( $item->get_quantity() ); ?></td>
+                        <td style="text-align: right; padding: 12px;"><?php echo wp_kses_post( $item->get_total() ); ?></td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>
         </table>
+
+        <h3 style="margin-top: 30px;">Billing Address</h3>
+        <div style="padding: 12px; background: #f9f9f9; border-radius: 4px;">
+            <?php
+            $billing = $order->get_address( 'billing' );
+            echo wp_kses_post( WC()->countries->get_formatted_address( $billing ) );
+            ?>
+        </div>
+
+        <h3 style="margin-top: 30px;">Shipping Address</h3>
+        <div style="padding: 12px; background: #f9f9f9; border-radius: 4px;">
+            <?php
+            $shipping = $order->get_address( 'shipping' );
+            if ( ! empty( $shipping['first_name'] ) ) {
+                echo wp_kses_post( WC()->countries->get_formatted_address( $shipping ) );
+            } else {
+                echo 'Same as billing address';
+            }
+            ?>
+        </div>
     </div>
     <?php
     return ob_get_clean();
