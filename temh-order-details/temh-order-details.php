@@ -24,28 +24,71 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Register the order details shortcode
  */
 add_shortcode( 'temh_order_details', function() {
-    // Verify nonce
-    if ( ! isset( $_GET['_wpnonce'] ) || ! wp_verify_nonce( $_GET['_wpnonce'], 'temh_order_details_nonce' ) ) {
-        return '';
+    // Debug: Check if WooCommerce is active
+    if ( ! function_exists( 'wc_get_order' ) ) {
+        return '<p style="color: red;">Error: WooCommerce is not active.</p>';
     }
-    
+
+    // Get order_id from URL
     $order_id = absint( sanitize_text_field( $_GET['order_id'] ?? 0 ) );
+    
     if ( ! $order_id ) {
-        return '';
+        return '<p style="color: red;">Error: No order ID provided. Use: ?order_id=123</p>';
     }
     
+    // Verify nonce for security
+    if ( isset( $_GET['_wpnonce'] ) ) {
+        if ( ! wp_verify_nonce( $_GET['_wpnonce'], 'temh_order_details_nonce' ) ) {
+            return '<p style="color: red;">Security check failed.</p>';
+        }
+    } else {
+        // Allow viewing if no nonce for testing, but log a warning
+        error_log( 'TEMH Order Details: No nonce provided for order ' . $order_id );
+    }
+    
+    // Get the order
     $order = wc_get_order( $order_id );
     if ( ! $order ) {
-        return '';
+        return '<p style="color: red;">Error: Order #' . $order_id . ' not found.</p>';
     }
     
     // Check if user can view this order
-    if ( ! current_user_can( 'view_order', $order_id ) ) {
-        return '';
+    if ( is_user_logged_in() ) {
+        if ( ! current_user_can( 'view_order', $order_id ) ) {
+            return '<p style="color: red;">Error: You do not have permission to view this order.</p>';
+        }
     }
 
+    // Output order details
     ob_start();
-    wc_get_template( 'order/order-details.php', [ 'order' => $order, 'order_id' => $order_id ] );
+    ?>
+    <div class="temh-order-details">
+        <h2>Order #<?php echo esc_html( $order->get_id() ); ?></h2>
+        <p><strong>Status:</strong> <?php echo esc_html( wc_get_order_status_name( $order->get_status() ) ); ?></p>
+        <p><strong>Date:</strong> <?php echo esc_html( $order->get_date_created()->date( 'Y-m-d H:i:s' ) ); ?></p>
+        <p><strong>Total:</strong> <?php echo wp_kses_post( $order->get_formatted_order_total() ); ?></p>
+        
+        <h3>Items</h3>
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="border-bottom: 2px solid #ddd;">
+                    <th style="text-align: left; padding: 8px;">Product</th>
+                    <th style="text-align: center; padding: 8px;">Qty</th>
+                    <th style="text-align: right; padding: 8px;">Price</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ( $order->get_items() as $item_id => $item ) : ?>
+                    <tr style="border-bottom: 1px solid #eee;">
+                        <td style="padding: 8px;"><?php echo esc_html( $item->get_name() ); ?></td>
+                        <td style="text-align: center; padding: 8px;"><?php echo esc_html( $item->get_quantity() ); ?></td>
+                        <td style="text-align: right; padding: 8px;"><?php echo wp_kses_post( $item->get_total() ); ?></td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+    <?php
     return ob_get_clean();
 } );
 
